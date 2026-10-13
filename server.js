@@ -12,7 +12,7 @@ import paymentRouter from "./src/payment/payment.routes.js";
 import productRouter from "./src/product/product.routes.js";
 import productVariantRouter from "./src/productvariant/productvariant.routes.js";
 import addressRouter from "./src/address/address.routes.js";
-
+import adminRouter from "./src/admin/admin.routes.js";
 dotenv.config();
 
 const app = express();
@@ -29,7 +29,7 @@ app.use("/payment", paymentRouter);
 app.use("/product", productRouter);
 app.use("/productvariant", productVariantRouter);
 app.use("/address", addressRouter);
-
+app.use("/admin", adminRouter);
 app.get("/", (req, res) => {
   res.send("Ecommerce backend is running");
 });

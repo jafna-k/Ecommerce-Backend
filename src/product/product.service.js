@@ -5,8 +5,18 @@ export const createProduct = async (data) => {
 };
 
 export const getProducts = async () => {
-  return await Product.find().populate("category");
+  try {
+    const products = await Product.find().populate("category");
+
+    console.log("PRODUCTS FROM DATABASE:", products);
+
+    return products;
+  } catch (error) {
+    console.error("GET PRODUCTS ERROR:", error);
+    throw error;
+  }
 };
+
 
 export const getProductById = async (id) => {
   return await Product.findById(id).populate("category");
