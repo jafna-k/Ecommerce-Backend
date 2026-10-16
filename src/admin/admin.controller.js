@@ -174,3 +174,95 @@ export const updateOrderStatus = async (req, res) => {
     });
   }
 };
+
+// Get Inventory
+export const getInventory = async (req, res) => {
+  try {
+    const inventory = await ProductVariant.find()
+      .populate("product", "name image status")
+      .sort({ stock: 1 });
+
+    res.status(200).json({
+      success: true,
+      count: inventory.length,
+      data: inventory,
+    });
+  } catch (error) {
+    console.error("Get inventory error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to load inventory",
+    });
+  }
+};
+
+// Adjust Stock
+export const adjustStock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { adjustment, reason } = req.body;
+
+    const quantity = Number(adjustment);
+
+    if (
+      adjustment === "" ||
+      adjustment === null ||
+      adjustment === undefined ||
+      !Number.isInteger(quantity) ||
+      quantity === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Enter a non-zero whole-number adjustment",
+      });
+    }
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Adjustment reason is required",
+      });
+    }
+
+    const variant = await ProductVariant.findById(id);
+
+    if (!variant) {
+      return res.status(404).json({
+        success: false,
+        message: "Product variant not found",
+      });
+    }
+
+    const newStock = Number(variant.stock) + quantity;
+
+    if (newStock < 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient stock. Current stock: ${variant.stock}`,
+      });
+    }
+
+    variant.stock = newStock;
+    await variant.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Stock updated successfully",
+      data: {
+        variantId: variant._id,
+        previousStock: newStock - quantity,
+        adjustment: quantity,
+        currentStock: variant.stock,
+        reason: reason.trim(),
+      },
+    });
+  } catch (error) {
+    console.error("Adjust stock error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to adjust stock",
+    });
+  }
+};

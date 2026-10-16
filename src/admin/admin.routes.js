@@ -1,24 +1,23 @@
+
 import express from "express";
 
-import {
-  verifyToken,
-} from "../middleware/auth.middleware.js";
+import { getAdminOrderById } from "../order/order.controller.js";
 
-import {
-  adminOnly,
-} from "../middleware/admin.middleware.js";
+import { verifyToken } from "../middleware/auth.middleware.js";
+import { adminOnly } from "../middleware/admin.middleware.js";
 
 import {
   getDashboardStats,
   getCustomers,
   getAdminOrders,
   updateOrderStatus,
+  getInventory,
+  adjustStock,
 } from "./admin.controller.js";
 
 const router = express.Router();
 
-
-// Dashboard
+// ==================== DASHBOARD ====================
 router.get(
   "/dashboard",
   verifyToken,
@@ -26,8 +25,7 @@ router.get(
   getDashboardStats
 );
 
-
-// Customers
+// ==================== CUSTOMERS ====================
 router.get(
   "/customers",
   verifyToken,
@@ -35,8 +33,9 @@ router.get(
   getCustomers
 );
 
+// ==================== ORDERS ====================
 
-// Orders
+// Get all orders
 router.get(
   "/orders",
   verifyToken,
@@ -44,6 +43,13 @@ router.get(
   getAdminOrders
 );
 
+// Get single order details
+router.get(
+  "/orders/:id",
+  verifyToken,
+  adminOnly,
+  getAdminOrderById
+);
 
 // Update order status
 router.put(
@@ -53,5 +59,22 @@ router.put(
   updateOrderStatus
 );
 
+// ==================== INVENTORY ====================
 
-export default router;
+// Get inventory
+router.get(
+  "/inventory",
+  verifyToken,
+  adminOnly,
+  getInventory
+);
+
+// Adjust stock
+router.patch(
+  "/inventory/:id/stock",
+  verifyToken,
+  adminOnly,
+  adjustStock
+);
+
+export default router
