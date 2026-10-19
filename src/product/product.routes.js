@@ -1,3 +1,4 @@
+
 import express from "express";
 
 import {
@@ -10,36 +11,35 @@ import {
 
 import { verifyToken } from "../middleware/auth.middleware.js";
 import { adminOnly } from "../middleware/admin.middleware.js";
+import upload from "../middleware/upload.middleware.js";
 
 const productRouter = express.Router();
 
-// Admin only
+// Create product with image upload (Admin only)
 productRouter.post(
   "/",
   verifyToken,
   adminOnly,
+  upload.single("image"),
   create
 );
 
-// Public
-productRouter.get(
-  "/",
-  getAll
-);
+// Get all products (Public)
+productRouter.get("/", getAll);
 
-productRouter.get(
-  "/:id",
-  getOne
-);
+// Get single product (Public)
+productRouter.get("/:id", getOne);
 
-// Admin only
+// Update product with optional new image (Admin only)
 productRouter.put(
   "/:id",
   verifyToken,
   adminOnly,
+  upload.single("image"),
   update
 );
 
+// Delete product (Admin only)
 productRouter.delete(
   "/:id",
   verifyToken,

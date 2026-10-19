@@ -1,4 +1,5 @@
 
+
 import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema(
@@ -12,6 +13,7 @@ const productSchema = new mongoose.Schema(
     description: {
       type: String,
       required: true,
+      trim: true,
     },
 
     category: {
@@ -20,12 +22,29 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Original price before discount
+    originalPrice: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    // Discount percentage: 0 to 100
+    discountPercentage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+
+    // Final selling price after discount
     price: {
       type: Number,
       required: true,
       min: 0,
     },
 
+    // Uploaded image path
     image: {
       type: String,
       default: null,
