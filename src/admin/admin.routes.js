@@ -2,7 +2,6 @@
 import express from "express";
 
 import { getAdminOrderById } from "../order/order.controller.js";
-
 import { verifyToken } from "../middleware/auth.middleware.js";
 import { adminOnly } from "../middleware/admin.middleware.js";
 
@@ -13,11 +12,12 @@ import {
   updateOrderStatus,
   getInventory,
   adjustStock,
+  getReports,
 } from "./admin.controller.js";
 
 const router = express.Router();
 
-// ==================== DASHBOARD ====================
+// Dashboard
 router.get(
   "/dashboard",
   verifyToken,
@@ -25,7 +25,7 @@ router.get(
   getDashboardStats
 );
 
-// ==================== CUSTOMERS ====================
+// Customers
 router.get(
   "/customers",
   verifyToken,
@@ -33,9 +33,7 @@ router.get(
   getCustomers
 );
 
-// ==================== ORDERS ====================
-
-// Get all orders
+// Orders
 router.get(
   "/orders",
   verifyToken,
@@ -43,7 +41,7 @@ router.get(
   getAdminOrders
 );
 
-// Get single order details
+// Single order details
 router.get(
   "/orders/:id",
   verifyToken,
@@ -59,9 +57,7 @@ router.put(
   updateOrderStatus
 );
 
-// ==================== INVENTORY ====================
-
-// Get inventory
+// Inventory
 router.get(
   "/inventory",
   verifyToken,
@@ -77,4 +73,12 @@ router.patch(
   adjustStock
 );
 
-export default router
+// Reports
+router.get(
+  "/reports",
+  verifyToken,
+  adminOnly,
+  getReports
+);
+
+export default router;

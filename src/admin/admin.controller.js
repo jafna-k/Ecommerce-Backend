@@ -19,10 +19,8 @@ export const getDashboardStats = async (req, res) => {
 
       Order.countDocuments(),
 
-    ProductVariant.countDocuments({
-     stock: {
-      $lte: 5,
-        },
+      ProductVariant.countDocuments({
+        stock: { $lte: 5 },
       }),
 
       Order.aggregate([
@@ -34,18 +32,14 @@ export const getDashboardStats = async (req, res) => {
         {
           $group: {
             _id: null,
-            totalSales: {
-              $sum: "$totalAmount",
-            },
+            totalSales: { $sum: "$totalAmount" },
           },
         },
       ]),
     ]);
 
     const totalSales =
-      salesData.length > 0
-        ? salesData[0].totalSales
-        : 0;
+      salesData.length > 0 ? salesData[0].totalSales : 0;
 
     res.status(200).json({
       success: true,
@@ -67,7 +61,6 @@ export const getDashboardStats = async (req, res) => {
     });
   }
 };
-
 
 // Get Customers
 export const getCustomers = async (req, res) => {
@@ -92,7 +85,6 @@ export const getCustomers = async (req, res) => {
     });
   }
 };
-
 
 // Get All Orders - Admin
 export const getAdminOrders = async (req, res) => {
@@ -122,7 +114,6 @@ export const getAdminOrders = async (req, res) => {
     });
   }
 };
-
 
 // Update Order Status - Admin
 export const updateOrderStatus = async (req, res) => {
@@ -156,7 +147,6 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     order.status = status;
-
     await order.save();
 
     res.status(200).json({
@@ -193,35 +183,34 @@ export const getInventory = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to load inventory",
+      error: error.message,
     });
   }
 };
 
-// Adjust Stock
+// Adjust Stock - Reason is not required
 export const adjustStock = async (req, res) => {
   try {
     const { id } = req.params;
-    const { adjustment, reason } = req.body;
-
-    const quantity = Number(adjustment);
+    const { adjustment } = req.body;
 
     if (
       adjustment === "" ||
       adjustment === null ||
-      adjustment === undefined ||
-      !Number.isInteger(quantity) ||
-      quantity === 0
+      adjustment === undefined
     ) {
       return res.status(400).json({
         success: false,
-        message: "Enter a non-zero whole-number adjustment",
+        message: "Enter a stock adjustment, such as +5 or -2",
       });
     }
 
-    if (!reason || !reason.trim()) {
+    const quantity = Number(adjustment);
+
+    if (!Number.isInteger(quantity) || quantity === 0) {
       return res.status(400).json({
         success: false,
-        message: "Adjustment reason is required",
+        message: "Enter a non-zero whole-number adjustment",
       });
     }
 
@@ -234,12 +223,13 @@ export const adjustStock = async (req, res) => {
       });
     }
 
-    const newStock = Number(variant.stock) + quantity;
+    const previousStock = Number(variant.stock || 0);
+    const newStock = previousStock + quantity;
 
     if (newStock < 0) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient stock. Current stock: ${variant.stock}`,
+        message: `Insufficient stock. Current stock: ${previousStock}`,
       });
     }
 
@@ -248,13 +238,12 @@ export const adjustStock = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Stock updated successfully",
+      message: "Stock updated successfully!",
       data: {
         variantId: variant._id,
-        previousStock: newStock - quantity,
+        previousStock,
         adjustment: quantity,
         currentStock: variant.stock,
-        reason: reason.trim(),
       },
     });
   } catch (error) {
@@ -263,6 +252,111 @@ export const adjustStock = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to adjust stock",
+      error: error.message,
+    });
+  }
+};
+
+// Reports
+export const getReports = async (req, res) => {
+  try {
+    const {
+      fromDate,
+      toDate,
+      type = "sales",
+    } = req.query;
+
+    if (!["sales", "orders"].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid report type",
+      });
+    }
+
+    if (fromDate && Number.isNaN(Date.parse(fromDate))) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid from date",
+      });
+    }
+
+    if (toDate && Number.isNaN(Date.parse(toDate))) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid to date",
+      });
+    }
+
+    if (fromDate && toDate && fromDate > toDate) {
+      return res.status(400).json({
+        success: false,
+        message: "From date must be before or equal to To date",
+      });
+    }
+
+    const filter = {};
+
+    if (fromDate || toDate) {
+      filter.createdAt = {};
+
+      if (fromDate) {
+        filter.createdAt.$gte = new Date(
+          `${fromDate}T00:00:00.000Z`
+        );
+      }
+
+      if (toDate) {
+        filter.createdAt.$lt = new Date(
+          new Date(`${toDate}T00:00:00.000Z`).getTime() +
+            24 * 60 * 60 * 1000
+        );
+      }
+    }
+
+    if (type === "sales") {
+      filter.status = { $ne: "Cancelled" };
+    }
+
+    const orders = await Order.find(filter)
+      .select("_id status totalAmount paymentMethod createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const data = orders.map((order) => ({
+      _id: order._id,
+      orderId: String(order._id),
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+      totalAmount: order.totalAmount ?? 0,
+      createdAt: order.createdAt,
+    }));
+
+    const totalOrders = orders.length;
+
+    const totalSales =
+      type === "sales"
+        ? orders.reduce(
+            (sum, order) =>
+              sum + Number(order.totalAmount || 0),
+            0
+          )
+        : 0;
+
+    res.status(200).json({
+      success: true,
+      data,
+      summary: {
+        totalOrders,
+        totalSales,
+      },
+    });
+  } catch (error) {
+    console.error("Reports error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate report",
+      error: error.message,
     });
   }
 };
