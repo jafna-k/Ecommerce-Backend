@@ -1,17 +1,35 @@
+
 import Address from "./address.model.js";
 
 export const createAddress = async (userId, data) => {
-  const address = await Address.create({
-    ...data,
+  // Check whether this customer already has an address
+  const existingAddress = await Address.findOne({
     user: userId,
   });
 
-  return address;
+  if (existingAddress) {
+    throw new Error(
+      "Address already exists. Please update your saved address."
+    );
+  }
+
+  return await Address.create({
+    name: data.name,
+    phone: data.phone,
+    address: data.address,
+    city: data.city,
+    state: data.state,
+    pincode: data.pincode,
+    isDefault: true,
+    user: userId,
+  });
 };
 
 export const getAddresses = async (userId) => {
-  return await Address.find({ user: userId })
-    .sort({ isDefault: -1, createdAt: -1 });
+  return await Address.find({ user: userId }).sort({
+    isDefault: -1,
+    createdAt: -1,
+  });
 };
 
 export const getAddressById = async (userId, id) => {
@@ -27,28 +45,41 @@ export const getAddressById = async (userId, id) => {
   return address;
 };
 
-export const updateAddress = async (
-  userId,
-  id,
-  data
-) => {
-  const address = await Address.findOneAndUpdate(
+export const updateAddress = async (userId, id, data) => {
+  const allowedFields = [
+    "name",
+    "phone",
+    "address",
+    "city",
+    "state",
+    "pincode",
+  ];
+
+  const updateData = {};
+
+  allowedFields.forEach((field) => {
+    if (data[field] !== undefined) {
+      updateData[field] = data[field];
+    }
+  });
+
+  const savedAddress = await Address.findOneAndUpdate(
     {
       _id: id,
       user: userId,
     },
-    data,
+    updateData,
     {
       new: true,
       runValidators: true,
     }
   );
 
-  if (!address) {
+  if (!savedAddress) {
     throw new Error("Address not found");
   }
 
-  return address;
+  return savedAddress;
 };
 
 export const deleteAddress = async (userId, id) => {

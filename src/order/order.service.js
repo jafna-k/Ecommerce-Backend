@@ -1,4 +1,5 @@
 
+
 import mongoose from "mongoose";
 import Order from "./order.model.js";
 import ProductVariant from "../productvariant/productvariant.model.js";
@@ -41,10 +42,7 @@ export const createOrder = async (userId, data) => {
           throw new Error("Product variant not found");
         }
 
-        if (
-          !Number.isInteger(item.quantity) ||
-          item.quantity < 1
-        ) {
+        if (!Number.isInteger(item.quantity) || item.quantity < 1) {
           throw new Error("Invalid cart quantity");
         }
 
@@ -52,7 +50,7 @@ export const createOrder = async (userId, data) => {
           throw new Error(`Insufficient stock for ${variant.sku}`);
         }
 
-        const price = variant.price;
+        const price = Number(variant.price);
         const itemSubtotal = price * item.quantity;
 
         subtotal += itemSubtotal;
@@ -118,7 +116,14 @@ export const createOrder = async (userId, data) => {
 // GET ALL ORDERS
 export const getOrders = async (userId) => {
   return await Order.find({ user: userId })
-    .populate("items.productVariant")
+    .populate({
+      path: "items.productVariant",
+      select: "size color price sku image product",
+      populate: {
+        path: "product",
+        select: "name image description",
+      },
+    })
     .sort({ createdAt: -1 });
 };
 
@@ -132,7 +137,14 @@ export const getOrderById = async (userId, orderId) => {
   return await Order.findOne({
     _id: orderId,
     user: userId,
-  }).populate("items.productVariant");
+  }).populate({
+    path: "items.productVariant",
+    select: "size color price sku image product",
+    populate: {
+      path: "product",
+      select: "name image description",
+    },
+  });
 };
 
 
@@ -174,7 +186,9 @@ export const cancelOrder = async (userId, orderId) => {
         );
 
         if (result.matchedCount !== 1) {
-          throw new Error("Product variant not found during cancellation");
+          throw new Error(
+            "Product variant not found during cancellation"
+          );
         }
       }
 
