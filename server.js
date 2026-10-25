@@ -16,6 +16,7 @@ import productRouter from "./src/product/product.routes.js";
 import productVariantRouter from "./src/productvariant/productvariant.routes.js";
 import addressRouter from "./src/address/address.routes.js";
 import adminRouter from "./src/admin/admin.routes.js";
+import wishlistRouter from "./src/wishlist/wishlist.routes.js";
 
 dotenv.config();
 
@@ -42,6 +43,9 @@ app.use("/product", productRouter);
 app.use("/productvariant", productVariantRouter);
 app.use("/address", addressRouter);
 app.use("/admin", adminRouter);
+
+console.log("Wishlist router:", typeof wishlistRouter);
+app.use("/wishlist",wishlistRouter);
 
 // Backend test route
 app.get("/", (req, res) => {
